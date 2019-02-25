@@ -1,0 +1,2 @@
+# torto
+Solves "Reversed Torto"
