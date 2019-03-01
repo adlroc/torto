@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 		else if (arg == "-m")
 			no_stats = true;
 		else if (arg == "-h") {
-			fprintf(stderr, "Usage: %s [-e] [-d] [-u] [-r] [-s] [-q]  <input.txt  >output.txt\n", argv[0]);
+			fprintf(stderr, "Usage: %s [flags]  <input.txt  >output.txt\n", argv[0]);
 			fprintf(stderr, "       -e       : output only essentially unique solutions\n");
 			fprintf(stderr, "       -d       : output only determinate solutions\n");
 			fprintf(stderr, "       -s       : output each solution using a single line\n");
