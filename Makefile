@@ -1,8 +1,8 @@
 CC = gcc
 CPP = g++
 
-CFLAGS = -O3 -Wall
-CPPFLAGS = -O3 -Wall
+CFLAGS = -mx32 -O3 -Wall
+CPPFLAGS = -mx32 -O3 -Wall -std=c++11
 LFLAGS = 
 
 SRCSC = $(wildcard *.c)
@@ -19,8 +19,8 @@ clean:
 	rm -rf $(PROGSC) $(PROGSCPP) *.dSYM
 
 %: %.c
-	$(CC) $(CFLAGS)  -o $@ $<
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $<
 
 %: %.cpp
-	$(CPP) $(CPPFLAGS)  -o $@ $<
+	$(CPP) $(CPPFLAGS) $(LFLAGS) -o $@ $<
 

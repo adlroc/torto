@@ -21,6 +21,8 @@
 // multiple array elements, but 64 seems good enough for our needs.
 #define MAX_WORDS 64
 
+#define MAX_PARTS (((NUM_ROW+1)/2)*((NUM_COL+1)/2))
+
 const char *words[MAX_WORDS];
 int len[MAX_WORDS];
 char board[NUM_ROW][NUM_COL+PAD_COL];
@@ -49,6 +51,7 @@ bool disable_pre_sort;
 bool raw_mode;
 bool single_line;
 bool quiet;
+int part_idx = -1;
 
 void output_solution();
 
@@ -124,11 +127,17 @@ void rec_torto(int n, int w, int l, int i, int j)
 
 void torto(int n)
 {
-	// Due to reflection symmetry we only need to
-	// explore ~ 1/4 of the configuration space.
-	for (int i = 0; i < (NUM_ROW+1)/2; ++i)
-		for (int j = 0; j < (NUM_COL+1)/2; ++j)
-			rec_torto(n, 0, 0, i, j);
+	int rows = (NUM_ROW+1)/2;
+	int cols = (NUM_COL+1)/2;
+	if (part_idx > -1) {
+		rec_torto(n, 0, 0, part_idx / cols, part_idx % cols);
+	} else {
+		// Due to reflection symmetry we only need to
+		// explore ~ 1/4 of the configuration space.
+		for (int i = 0; i < rows; ++i)
+			for (int j = 0; j < cols; ++j)
+				rec_torto(n, 0, 0, i, j);
+	}
 }
 
 bool is_determinate()
@@ -206,6 +215,8 @@ bool sorter(const std::string &a, const std::string &b)
 
 int main(int argc, char *argv[])
 {
+	bool no_stats = false;
+
 	for (int i = 1; i < argc; ++i) {
 		std::string arg = std::string(argv[i]);
 		if (arg == "-e")
@@ -220,15 +231,22 @@ int main(int argc, char *argv[])
 			single_line = true;
 		else if (arg == "-q")
 			quiet = true;
-		else if (arg == "-h") {
+		else if (arg == "-m")
+			no_stats = true;
+		else if (arg == "-p" && i < argc-1) {
+			part_idx = atoi(argv[++i]);
+			if (part_idx < 0 || part_idx >= MAX_PARTS) return -1;
+		} else if (arg == "-h") {
 			std::cerr << "Usage: " << argv[0]
 					  << " [-e] [-d] [-u] [-r] [-s] [-q]  <input.txt  >output.txt\n";
-			std::cerr << "       -e : output only essentially unique solutions\n";
-			std::cerr << "       -d : output only determinate solutions\n";
-			std::cerr << "       -u : do not sort word list before searching solutions\n";
-			std::cerr << "       -r : raw mode - do not filter out duplicate solutions\n";
-			std::cerr << "       -s : output each solution using a single line\n";
-			std::cerr << "       -q : quiet mode - do not output solutions\n";
+			std::cerr << "       -e       : output only essentially unique solutions\n";
+			std::cerr << "       -d       : output only determinate solutions\n";
+			std::cerr << "       -u       : do not sort word list before searching solutions\n";
+			std::cerr << "       -r       : raw mode - do not filter out duplicate solutions\n";
+			std::cerr << "       -s       : output each solution using a single line\n";
+			std::cerr << "       -q       : quiet mode - do not output solutions\n";
+			std::cerr << "       -m       : mute mode - do not output statistics\n";
+			std::cerr << "       -p <idx> : partial mode with index <idx>\n";
 			return 0;
 		}
 	}
@@ -253,10 +271,12 @@ int main(int argc, char *argv[])
 
 	torto(num_words);
 
-	std::cerr << "Total solutions: " << sol_count
-	          << "  (" << dsol_count << " determinate)\n";
-	std::cerr << "Essentially unique solutions: " << esol_count
-	          << "  (" << edsol_count << " determinate)\n";
-	std::cerr << "Call count: " << call_count << "\n";
+	if (!no_stats) {
+		std::cerr << "Total solutions: " << sol_count
+				  << "  (" << dsol_count << " determinate)\n";
+		std::cerr << "Essentially unique solutions: " << esol_count
+				  << "  (" << edsol_count << " determinate)\n";
+		std::cerr << "Call count: " << call_count << "\n";
+	}
 	return 0;
 }
