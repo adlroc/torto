@@ -3,18 +3,16 @@ if [ "$#" -ne 1 ]; then
 	echo "Usage:" $0 "<input.txt>  >output.txt"
 	exit 1
 fi
-for i in 0 1 2 3 4 5; do
-	for p in 0 1; do
-		for q in 0 1; do
-			./torto -s -m -i ${i} -p 1 ${p} -p 2 ${q} < $1 >tmptor.${i}.${p}.${q} &
-			pids[${i}*4+${p}*2+${q}]=$!
-		done
+for a in 0 1; do
+	for b in 0 1; do
+		./torto -s -m -p 0 ${a} -p 1 ${b} < $1 >tmptor.${a}.${b} &
+		pids[${a}*2+${b}]=$!
 	done
 done
 for pid in ${pids[*]}; do
 	wait $pid
 done
 
-cat tmptor.{0,1,2,3,4,5}.{0,1}.{0,1} | ./tortomerge
+cat tmptor.{0,1}.{0,1} | ./tortomerge
 
-rm -f tmptor.{0,1,2,3,4,5}.{0,1}.{0,1}
+rm -f tmptor.{0,1}.{0,1}
