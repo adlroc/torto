@@ -14,8 +14,8 @@
 #define NUM_ROW 6
 
 // Padding inner array dim. to powers of two makes access slightly faster.
-#define SIZE_COL 4
-#define SIZE_ROW 8
+#define PAD_COL 1
+#define PAD_ROW 2
 
 // Defined by bitmask type. It can be trivially increased by using
 // multiple array elements, but 64 seems good enough for our needs.
@@ -30,15 +30,11 @@ int len[MAX_WORDS];
 int parity[MAX_WORDS];
 
 // board characters
-char *vboard;
+char board[NUM_ROW][NUM_COL+PAD_COL];
 // bitmask to mark simultaneous covering of a site by multiple words
-unsigned long long *vbitmask;
+unsigned long long bitmask[NUM_ROW][NUM_COL+PAD_COL];
 // breadcrumbs to enforce "no diagonal crossing" constraint
-int *vcrumbs;
-
-#define board(i,j) vboard[(i)*SIZE_COL+(j)]
-#define bitmask(i,j) vbitmask[(i)*SIZE_COL+(j)]
-#define crumbs(w,i,j) vcrumbs[(w)*SIZE_ROW*SIZE_COL+(i)*SIZE_COL+(j)]
+int crumbs[MAX_WORDS][NUM_ROW+PAD_ROW][NUM_COL+PAD_COL];
 
 // all unique solutions including mirrored configurations
 unsigned long long sol_count;
@@ -67,9 +63,9 @@ void output_solution();
 void rec_torto(int n, int w, int l, int i, int j)
 {
 	++call_count;
-	board(i,j) = words[w][l];
-	bitmask(i,j) |= 1<<w;
-	crumbs(w,i,j) = l+2;
+	board[i][j] = words[w][l];
+	bitmask[i][j] |= 1<<w;
+	crumbs[w][i][j] = l+2;
 
 	if (l == len[w]-1) {
 		// last char
@@ -80,8 +76,8 @@ void rec_torto(int n, int w, int l, int i, int j)
 			// next word
 			for (int y = 0; y < NUM_ROW; ++y)
 				for (int x = 0; x < NUM_COL; ++x)
-					if ((!board(y,x) || board(y,x) == words[w+1][0])
-							&& !(bitmask(y,x) & (1<<(w+1)))
+					if ((!board[y][x] || board[y][x] == words[w+1][0])
+							&& !(bitmask[y][x] & (1<<(w+1)))
 							&& (parity[w+1] == -1 || (y*NUM_COL+x)%2 == parity[w+1]))
 						rec_torto(n, w+1, 0, y, x);
 		}
@@ -90,49 +86,49 @@ void rec_torto(int n, int w, int l, int i, int j)
 		char c = words[w][l+1];
 		if (j < NUM_COL-1) {
 			// east
-			if ((!board(i,j+1) || board(i,j+1) == c)
-					&& !(bitmask(i,j+1) & (1<<w)))
+			if ((!board[i][j+1] || board[i][j+1] == c)
+					&& !(bitmask[i][j+1] & (1<<w)))
 				rec_torto(n, w, l+1, i, j+1);
 			// northeast
-			if (i > 0 && (!board(i-1,j+1) || board(i-1,j+1) == c)
-					&& !(bitmask(i-1,j+1) & (1<<w))
-					&& abs(crumbs(w,i-1,j) - crumbs(w,i,j+1)) != 1)
+			if (i > 0 && (!board[i-1][j+1] || board[i-1][j+1] == c)
+					&& !(bitmask[i-1][j+1] & (1<<w))
+					&& abs(crumbs[w][i-1][j] - crumbs[w][i][j+1]) != 1)
 				rec_torto(n, w, l+1, i-1, j+1);
 			// southeast
-			if (i < NUM_ROW-1 && (!board(i+1,j+1) || board(i+1,j+1) == c)
-					&& !(bitmask(i+1,j+1) & (1<<w))
-					&& abs(crumbs(w,i+1,j) - crumbs(w,i,j+1)) != 1)
+			if (i < NUM_ROW-1 && (!board[i+1][j+1] || board[i+1][j+1] == c)
+					&& !(bitmask[i+1][j+1] & (1<<w))
+					&& abs(crumbs[w][i+1][j] - crumbs[w][i][j+1]) != 1)
 				rec_torto(n, w, l+1, i+1, j+1);
 		}
 		if (j > 0) {
 			// west
-			if ((!board(i,j-1) || board(i,j-1) == c)
-					&& !(bitmask(i,j-1) & (1<<w)))
+			if ((!board[i][j-1] || board[i][j-1] == c)
+					&& !(bitmask[i][j-1] & (1<<w)))
 				rec_torto(n, w, l+1, i, j-1);
 			// northwest
-			if (i > 0 && (!board(i-1,j-1) || board(i-1,j-1) == c)
-					&& !(bitmask(i-1,j-1) & (1<<w))
-					&& abs(crumbs(w,i-1,j) - crumbs(w,i,j-1)) != 1)
+			if (i > 0 && (!board[i-1][j-1] || board[i-1][j-1] == c)
+					&& !(bitmask[i-1][j-1] & (1<<w))
+					&& abs(crumbs[w][i-1][j] - crumbs[w][i][j-1]) != 1)
 				rec_torto(n, w, l+1, i-1, j-1);
 			// southwest
-			if (i < NUM_ROW-1 && (!board(i+1,j-1) || board(i+1,j-1) == c)
-					&& !(bitmask(i+1,j-1) & (1<<w))
-					&& abs(crumbs(w,i+1,j) - crumbs(w,i,j-1)) != 1)
+			if (i < NUM_ROW-1 && (!board[i+1][j-1] || board[i+1][j-1] == c)
+					&& !(bitmask[i+1][j-1] & (1<<w))
+					&& abs(crumbs[w][i+1][j] - crumbs[w][i][j-1]) != 1)
 				rec_torto(n, w, l+1, i+1, j-1);
 		}
 		// north
-		if (i > 0 && (!board(i-1,j) || board(i-1,j) == c)
-				&& !(bitmask(i-1,j) & (1<<w)))
+		if (i > 0 && (!board[i-1][j] || board[i-1][j] == c)
+				&& !(bitmask[i-1][j] & (1<<w)))
 			rec_torto(n, w, l+1, i-1, j);
 		// south
-		if (i < NUM_ROW-1 && (!board(i+1,j) || board(i+1,j) == c)
-				&& !(bitmask(i+1,j) & (1<<w)))
+		if (i < NUM_ROW-1 && (!board[i+1][j] || board[i+1][j] == c)
+				&& !(bitmask[i+1][j] & (1<<w)))
 			rec_torto(n, w, l+1, i+1, j);
 	}
 	// undo changes
-	bitmask(i,j) &= ~(1<<w);
-	if (!bitmask(i,j)) board(i,j) = 0;
-	crumbs(w,i,j) = 0;
+	bitmask[i][j] &= ~(1<<w);
+	if (!bitmask[i][j]) board[i][j] = 0;
+	crumbs[w][i][j] = 0;
 }
 
 void torto(int n)
@@ -155,7 +151,7 @@ bool is_determinate()
 {
 	for (int i = 0; i < NUM_ROW; ++i)
 		for (int j = 0; j < NUM_COL; ++j)
-			if (!board(i,j))
+			if (!board[i][j])
 				return false;
 	return true;
 }
@@ -165,7 +161,7 @@ std::string board_key(bool flipy, bool flipx)
 	std::string key;
 	for (int i = 0; i < NUM_ROW; ++i)
 		for (int j = 0; j < NUM_COL; ++j)
-			key += board(flipy ? NUM_ROW-1-i : i, flipx ? NUM_COL-1-j : j);
+			key += board[flipy ? NUM_ROW-1-i : i][flipx ? NUM_COL-1-j : j];
 	return key;
 }
 
@@ -173,7 +169,7 @@ void output_board(bool flipy, bool flipx)
 {
 	for (int i = 0; i < NUM_ROW; ++i) {
 		for (int j = 0; j < NUM_COL; ++j) {
-			char c = board(flipy ? NUM_ROW-1-i : i, flipx ? NUM_COL-1-j : j);
+			char c = board[flipy ? NUM_ROW-1-i : i][flipx ? NUM_COL-1-j : j];
 			std::cout << (c ? c : '.');
 		}
 		if (!single_line) std::cout << "\n";
@@ -270,10 +266,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	vboard = new char[NUM_ROW*SIZE_COL]();
-	vbitmask = new unsigned long long[NUM_ROW*SIZE_COL]();
-	vcrumbs = new int[MAX_WORDS*SIZE_ROW*SIZE_COL]();
-
 	int num_words;
 	std::cin >> num_words;
 	if (num_words < 1 || num_words > MAX_WORDS) return -1;
@@ -301,9 +293,5 @@ int main(int argc, char *argv[])
 				  << "  (" << edsol_count << " determinate)\n";
 		std::cerr << "Call count: " << call_count << "\n";
 	}
-
-	delete []vboard;
-	delete []vbitmask;
-	delete []vcrumbs;
 	return 0;
 }
