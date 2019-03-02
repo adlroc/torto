@@ -27,6 +27,8 @@
 const char *words[MAX_WORDS];
 int len[MAX_WORDS];
 
+int parity[MAX_WORDS];
+
 // board characters
 char *vboard;
 // bitmask to mark simultaneous covering of a site by multiple words
@@ -79,7 +81,8 @@ void rec_torto(int n, int w, int l, int i, int j)
 			for (int y = 0; y < NUM_ROW; ++y)
 				for (int x = 0; x < NUM_COL; ++x)
 					if ((!board(y,x) || board(y,x) == words[w+1][0])
-							&& !(bitmask(y,x) & (1<<(w+1))))
+							&& !(bitmask(y,x) & (1<<(w+1)))
+							&& (parity[w+1] == -1 || (y*NUM_COL+x)%2 == parity[w+1]))
 						rec_torto(n, w+1, 0, y, x);
 		}
 	} else {
@@ -143,7 +146,8 @@ void torto(int n)
 		// explore ~ 1/4 of the configuration space.
 		for (int i = 0; i < rows; ++i)
 			for (int j = 0; j < cols; ++j)
-				rec_torto(n, 0, 0, i, j);
+				if (parity[0] == -1 || (i*cols+j)%2 == parity[0])
+					rec_torto(n, 0, 0, i, j);
 	}
 }
 
@@ -224,6 +228,9 @@ int main(int argc, char *argv[])
 {
 	bool no_stats = false;
 
+	for (int i = 0; i < MAX_WORDS; ++i)
+		parity[i] = -1;
+
 	for (int i = 1; i < argc; ++i) {
 		std::string arg = std::string(argv[i]);
 		if (arg == "-e")
@@ -240,19 +247,25 @@ int main(int argc, char *argv[])
 			quiet = true;
 		else if (arg == "-m")
 			no_stats = true;
-		else if (arg == "-p" && i < argc-1) {
+		else if (arg == "-i" && i < argc-1) {
 			part_idx = atoi(argv[++i]);
 			if (part_idx < 0 || part_idx >= MAX_PARTS) return -1;
+		} else if (arg == "-p" && i < argc-2) {
+			int lvl = atoi(argv[++i]);
+			int par = atoi(argv[++i]);
+			if (lvl < 0 || lvl >= MAX_WORDS || par < 0 || par > 1) return -1;
+			parity[lvl] = par;
 		} else if (arg == "-h") {
 			std::cerr << "Usage: " << argv[0] << " [flags] <input.txt  >output.txt\n";
-			std::cerr << "       -e       : output only essentially unique solutions\n";
-			std::cerr << "       -d       : output only determinate solutions\n";
-			std::cerr << "       -u       : do not sort word list before searching solutions\n";
-			std::cerr << "       -r       : raw mode - do not filter out duplicate solutions\n";
-			std::cerr << "       -s       : output each solution using a single line\n";
-			std::cerr << "       -q       : quiet mode - do not output solutions\n";
-			std::cerr << "       -m       : mute mode - do not output statistics\n";
-			std::cerr << "       -p <idx> : partial mode with index <idx>\n";
+			std::cerr << "       -e         : output only essentially unique solutions\n";
+			std::cerr << "       -d         : output only determinate solutions\n";
+			std::cerr << "       -u         : do not sort word list before searching solutions\n";
+			std::cerr << "       -r         : raw mode - do not filter out duplicate solutions\n";
+			std::cerr << "       -s         : output each solution using a single line\n";
+			std::cerr << "       -q         : quiet mode - do not output solutions\n";
+			std::cerr << "       -m         : mute mode - do not output statistics\n";
+			std::cerr << "       -i <idx>   : partial mode: top level partition with index <idx>\n";
+			std::cerr << "       -p <l> <p> : partial mode: bifurcation level <l> with parity <p>\n";
 			return 0;
 		}
 	}
