@@ -67,22 +67,7 @@ void rec_torto(int n, int w, int l, int i, int j)
 	bitmask[i][j] |= 1<<w;
 	crumbs[w][i][j] = l+2;
 
-	if (l == len[w]-1) {
-		// last char
-		if (w == n-1) {
-			// last word
-			output_solution();
-		} else {
-			// next word
-			char c = words[w+1][0];
-			for (int y = 0; y < NUM_ROW; ++y)
-				for (int x = 0; x < NUM_COL; ++x)
-					if ((!board[y][x] || board[y][x] == c)
-							&& !(bitmask[y][x] & (1<<(w+1)))
-							&& (parity[w+1] == -1 || (y*NUM_COL+x)%2 == parity[w+1]))
-						rec_torto(n, w+1, 0, y, x);
-		}
-	} else {
+	if (l < len[w]-1) {
 		// next char in word
 		char c = words[w][l+1];
 		if (j < NUM_COL-1) {
@@ -125,6 +110,21 @@ void rec_torto(int n, int w, int l, int i, int j)
 		if (i < NUM_ROW-1 && (!board[i+1][j] || board[i+1][j] == c)
 				&& !(bitmask[i+1][j] & (1<<w)))
 			rec_torto(n, w, l+1, i+1, j);
+	} else {
+		// last char
+		if (w == n-1) {
+			// last word
+			output_solution();
+		} else {
+			// next word
+			char c = words[w+1][0];
+			for (int y = 0; y < NUM_ROW; ++y)
+				for (int x = 0; x < NUM_COL; ++x)
+					if ((!board[y][x] || board[y][x] == c)
+							&& !(bitmask[y][x] & (1<<(w+1)))
+							&& (parity[w+1] == -1 || (y*NUM_COL+x)%2 == parity[w+1]))
+						rec_torto(n, w+1, 0, y, x);
+		}
 	}
 	// undo changes
 	bitmask[i][j] &= ~(1<<w);
