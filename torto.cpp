@@ -21,13 +21,12 @@
 // multiple array elements, but 64 seems good enough for our needs.
 #define MAX_WORDS 64
 
-// max top level partitions
-#define MAX_PARTS (((NUM_ROW+1)/2)*((NUM_COL+1)/2))
-
 const char *words[MAX_WORDS];
 int len[MAX_WORDS];
 
-int parity[MAX_WORDS];
+// modulo/remainder partition
+int part_mod[MAX_WORDS];
+int part_rem[MAX_WORDS];
 
 // board characters
 char board[NUM_ROW][NUM_COL+PAD_COL];
@@ -56,7 +55,6 @@ bool disable_pre_sort;
 bool raw_mode;
 bool single_line;
 bool quiet;
-int part_idx = -1;
 
 void output_solution();
 
@@ -122,7 +120,7 @@ void rec_torto(int n, int w, int l, int i, int j)
 				for (int x = 0; x < NUM_COL; ++x)
 					if ((!board[y][x] || board[y][x] == c)
 							&& !(bitmask[y][x] & (1<<(w+1)))
-							&& (parity[w+1] == -1 || (y*NUM_COL+x)%2 == parity[w+1]))
+							&& (!part_mod[w+1] || (y*NUM_COL+x)%part_mod[w+1] == part_rem[w+1]))
 						rec_torto(n, w+1, 0, y, x);
 		}
 	}
@@ -134,18 +132,14 @@ void rec_torto(int n, int w, int l, int i, int j)
 
 void torto(int n)
 {
+	// Due to reflection symmetry we only need to
+	// explore ~ 1/4 of the configuration space.
 	int rows = (NUM_ROW+1)/2;
 	int cols = (NUM_COL+1)/2;
-	if (part_idx > -1) {
-		rec_torto(n, 0, 0, part_idx / cols, part_idx % cols);
-	} else {
-		// Due to reflection symmetry we only need to
-		// explore ~ 1/4 of the configuration space.
-		for (int i = 0; i < rows; ++i)
-			for (int j = 0; j < cols; ++j)
-				if (parity[0] == -1 || (i*cols+j)%2 == parity[0])
-					rec_torto(n, 0, 0, i, j);
-	}
+	for (int i = 0; i < rows; ++i)
+		for (int j = 0; j < cols; ++j)
+			if (!part_mod[0] || (i*cols+j)%part_mod[0] == part_rem[0])
+				rec_torto(n, 0, 0, i, j);
 }
 
 bool is_determinate()
@@ -225,9 +219,6 @@ int main(int argc, char *argv[])
 {
 	bool no_stats = false;
 
-	for (int i = 0; i < MAX_WORDS; ++i)
-		parity[i] = -1;
-
 	for (int i = 1; i < argc; ++i) {
 		std::string arg = std::string(argv[i]);
 		if (arg == "-e")
@@ -244,25 +235,23 @@ int main(int argc, char *argv[])
 			quiet = true;
 		else if (arg == "-m")
 			no_stats = true;
-		else if (arg == "-i" && i < argc-1) {
-			part_idx = atoi(argv[++i]);
-			if (part_idx < 0 || part_idx >= MAX_PARTS) return -1;
-		} else if (arg == "-p" && i < argc-2) {
+		else if (arg == "-p" && i < argc-3) {
 			int lvl = atoi(argv[++i]);
-			int par = atoi(argv[++i]);
-			if (lvl < 0 || lvl >= MAX_WORDS || par < 0 || par > 1) return -1;
-			parity[lvl] = par;
+			int mod = atoi(argv[++i]);
+			int rem = atoi(argv[++i]);
+			if (lvl < 0 || lvl >= MAX_WORDS || mod < 1 || rem < 0) return -1;
+			part_mod[lvl] = mod;
+			part_rem[lvl] = rem;
 		} else if (arg == "-h") {
 			std::cerr << "Usage: " << argv[0] << " [flags] <input.txt  >output.txt\n";
-			std::cerr << "       -e         : output only essentially unique solutions\n";
-			std::cerr << "       -d         : output only determinate solutions\n";
-			std::cerr << "       -u         : do not sort word list before searching solutions\n";
-			std::cerr << "       -r         : raw mode - do not filter out duplicate solutions\n";
-			std::cerr << "       -s         : output each solution using a single line\n";
-			std::cerr << "       -q         : quiet mode - do not output solutions\n";
-			std::cerr << "       -m         : mute mode - do not output statistics\n";
-			std::cerr << "       -i <idx>   : partial mode: top level partition with index <idx>\n";
-			std::cerr << "       -p <l> <p> : partial mode: bifurcation level <l> with parity <p>\n";
+			std::cerr << "       -e             : output only essentially unique solutions\n";
+			std::cerr << "       -d             : output only determinate solutions\n";
+			std::cerr << "       -u             : do not sort word list before searching solutions\n";
+			std::cerr << "       -r             : raw mode - do not filter out duplicate solutions\n";
+			std::cerr << "       -s             : output each solution using a single line\n";
+			std::cerr << "       -q             : quiet mode - do not output solutions\n";
+			std::cerr << "       -m             : mute mode - do not output statistics\n";
+			std::cerr << "       -p <l> <m> <r> : partition level/modulo/remainder\n";
 			return 0;
 		}
 	}
