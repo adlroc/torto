@@ -19,8 +19,8 @@ clean:
 	rm -rf $(PROGSC) $(PROGSCPP) *.dSYM
 
 %: %.c
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $< $(LFLAGS)
 
 %: %.cpp
-	$(CPP) $(CPPFLAGS) $(LFLAGS) -o $@ $<
+	$(CPP) $(CPPFLAGS) -o $@ $< $(LFLAGS)
 

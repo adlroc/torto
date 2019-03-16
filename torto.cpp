@@ -24,10 +24,6 @@
 const char *words[MAX_WORDS];
 int len[MAX_WORDS];
 
-// modulo/remainder partition
-int part_mod[MAX_WORDS];
-int part_rem[MAX_WORDS];
-
 // board characters
 char board[NUM_ROW][NUM_COL+PAD_COL];
 // bitmask to mark simultaneous covering of a site by multiple words
@@ -49,6 +45,11 @@ unsigned long long call_count;
 // Set to filter out duplicate solutions.
 std::unordered_set<std::string> unq_sols;
 
+// number of partitions and index for partitioned mode
+unsigned int par_cnt = 1;
+unsigned int par_idx = 0;
+
+// flags
 bool essential_only;
 bool determinate_only;
 bool disable_pre_sort;
@@ -61,13 +62,17 @@ void output_solution();
 void rec_torto(int n, int w, int l, int i, int j)
 {
 	++call_count;
+	crumbs[w][i][j] = l+2;
 	board[i][j] = words[w][l];
 	bitmask[i][j] |= 1<<w;
-	crumbs[w][i][j] = l+2;
 
 	if (l < len[w]-1) {
 		// next char in word
 		char c = words[w][l+1];
+		// north
+		if (i > 0 && (!board[i-1][j] || board[i-1][j] == c)
+				&& !(bitmask[i-1][j] & (1<<w)))
+			rec_torto(n, w, l+1, i-1, j);
 		if (j < NUM_COL-1) {
 			// east
 			if ((!board[i][j+1] || board[i][j+1] == c)
@@ -100,10 +105,6 @@ void rec_torto(int n, int w, int l, int i, int j)
 					&& abs(crumbs[w][i+1][j] - crumbs[w][i][j-1]) != 1)
 				rec_torto(n, w, l+1, i+1, j-1);
 		}
-		// north
-		if (i > 0 && (!board[i-1][j] || board[i-1][j] == c)
-				&& !(bitmask[i-1][j] & (1<<w)))
-			rec_torto(n, w, l+1, i-1, j);
 		// south
 		if (i < NUM_ROW-1 && (!board[i+1][j] || board[i+1][j] == c)
 				&& !(bitmask[i+1][j] & (1<<w)))
@@ -116,12 +117,15 @@ void rec_torto(int n, int w, int l, int i, int j)
 		} else {
 			// next word
 			char c = words[w+1][0];
-			for (int y = 0; y < NUM_ROW; ++y)
-				for (int x = 0; x < NUM_COL; ++x)
+			for (int y = 0; y < NUM_ROW; ++y) {
+				for (int x = 0; x < NUM_COL; ++x) {
+					static unsigned int h;
 					if ((!board[y][x] || board[y][x] == c)
 							&& !(bitmask[y][x] & (1<<(w+1)))
-							&& (!part_mod[w+1] || (y*NUM_COL+x)%part_mod[w+1] == part_rem[w+1]))
+							&& (w > 0 || (h = h * 1103515245U + 12345U) % par_cnt == par_idx))
 						rec_torto(n, w+1, 0, y, x);
+				}
+			}
 		}
 	}
 	// undo changes
@@ -138,8 +142,7 @@ void torto(int n)
 	int cols = (NUM_COL+1)/2;
 	for (int i = 0; i < rows; ++i)
 		for (int j = 0; j < cols; ++j)
-			if (!part_mod[0] || (i*cols+j)%part_mod[0] == part_rem[0])
-				rec_torto(n, 0, 0, i, j);
+			rec_torto(n, 0, 0, i, j);
 }
 
 bool is_determinate()
@@ -235,14 +238,11 @@ int main(int argc, char *argv[])
 			quiet = true;
 		else if (arg == "-m")
 			no_stats = true;
-		else if (arg == "-p" && i < argc-3) {
-			int lvl = atoi(argv[++i]);
-			int mod = atoi(argv[++i]);
-			int rem = atoi(argv[++i]);
-			if (lvl < 0 || lvl >= MAX_WORDS || mod < 1 || rem < 0) return -1;
-			part_mod[lvl] = mod;
-			part_rem[lvl] = rem;
-		} else if (arg == "-h") {
+		else if (arg == "-p" && i < argc-2) {
+			par_cnt = strtoul(argv[++i], NULL, 10);
+			par_idx = strtoul(argv[++i], NULL, 10);
+			if (par_cnt < 1 || par_idx >= par_cnt) return -1;
+		} else {
 			std::cerr << "Usage: " << argv[0] << " [flags] <input.txt  >output.txt\n";
 			std::cerr << "       -e             : output only essentially unique solutions\n";
 			std::cerr << "       -d             : output only determinate solutions\n";
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 			std::cerr << "       -s             : output each solution using a single line\n";
 			std::cerr << "       -q             : quiet mode - do not output solutions\n";
 			std::cerr << "       -m             : mute mode - do not output statistics\n";
-			std::cerr << "       -p <l> <m> <r> : partition level/modulo/remainder\n";
+			std::cerr << "       -p <cnt> <idx> : partitioned mode\n";
 			return 0;
 		}
 	}

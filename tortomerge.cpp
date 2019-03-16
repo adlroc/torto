@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 			quiet = true;
 		else if (arg == "-m")
 			no_stats = true;
-		else if (arg == "-h") {
+		else {
 			fprintf(stderr, "Usage: %s [flags]  <input.txt  >output.txt\n", argv[0]);
 			fprintf(stderr, "       -e       : output only essentially unique solutions\n");
 			fprintf(stderr, "       -d       : output only determinate solutions\n");
