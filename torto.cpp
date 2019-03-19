@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_set>
+#include <functional>
 #include <algorithm>
 #include <string>
 
@@ -47,6 +48,7 @@ unsigned int par_idx = 0;
 // flags
 bool essential_only;
 bool determinate_only;
+bool alt_sort;
 bool disable_pre_sort;
 bool raw_mode;
 bool single_line;
@@ -116,7 +118,7 @@ void rec_torto(int n, int w, int l, int i, int j)
 				for (int x = 0; x < NUM_COL; ++x) {
 					static unsigned int h;
 					if ((!occupancy[y][x] || board[y][x] == nc)
-							&& (w > 0 || (h = h * 1103515245U + 12345U) % par_cnt == par_idx))
+							&& (w > 0 || h++ % par_cnt == par_idx))
 						rec_torto(n, w+1, 0, y, x);
 				}
 			}
@@ -213,6 +215,10 @@ void output_solution()
 // to help eliminate large branches of the search tree first.
 bool sorter(const std::string &a, const std::string &b)
 {
+	if (alt_sort && a.length() == b.length()) {
+		std::hash<std::string> hasher;
+		return hasher(a) > hasher(b);
+	}
 	return a.length() > b.length();
 }
 
@@ -228,6 +234,8 @@ int main(int argc, char *argv[])
 			determinate_only = true;
 		else if (arg == "-u")
 			disable_pre_sort = true;
+		else if (arg == "-a")
+			alt_sort = true;
 		else if (arg == "-r")
 			raw_mode = true;
 		else if (arg == "-s")
@@ -245,6 +253,7 @@ int main(int argc, char *argv[])
 			std::cerr << "       -e             : output only essentially unique solutions\n";
 			std::cerr << "       -d             : output only determinate solutions\n";
 			std::cerr << "       -u             : do not sort word list before searching solutions\n";
+			std::cerr << "       -a             : use alternative sorting\n";
 			std::cerr << "       -r             : raw mode - do not filter out duplicate solutions\n";
 			std::cerr << "       -s             : output each solution using a single line\n";
 			std::cerr << "       -q             : quiet mode - do not output solutions\n";

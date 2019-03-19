@@ -4,7 +4,7 @@ if [ "$#" -ne 1 ]; then
 	exit 1
 fi
 for a in 0 1 2 3 4 5 6 7; do
-    ./torto -s -m -p 8 ${a} < $1 >tmptor.${a} &
+    ./torto -s -a -m -p 8 ${a} < $1 >tmptor.${a} &
     pids[${a}]=$!
 done
 for pid in ${pids[*]}; do
