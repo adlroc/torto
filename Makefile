@@ -1,8 +1,9 @@
 CC = gcc
 CPP = g++
 
-CFLAGS = -mx32 -O3 -Wall
-CPPFLAGS = -mx32 -O3 -Wall -std=c++11
+# Add -mx32 to the flags below, if your compiler supports it, to increase performance.
+CFLAGS = -O3 -Wall
+CPPFLAGS = -O3 -Wall -std=c++11
 LFLAGS = 
 
 SRCSC = $(wildcard *.c)
